@@ -2,7 +2,6 @@ import { describe, expect, test } from "bun:test";
 import {
 	addChildNode,
 	buildPathToNode,
-	createNode,
 	deleteNode,
 	editNodeTitle,
 	findNode,
@@ -28,9 +27,10 @@ function createTestNode(title: string, id?: string): Node {
 	};
 }
 
-describe("createNode", () => {
+describe("addChildNode", () => {
 	test("creates node with correct properties", () => {
-		const node = createNode("Test Title");
+		const parent = createTestNode("Parent");
+		const node = addChildNode(parent, "Test Title");
 		expect(node.title).toBe("Test Title");
 		expect(node.status).toBe("open");
 		expect(node.children).toEqual([]);
@@ -39,12 +39,11 @@ describe("createNode", () => {
 	});
 
 	test("trims whitespace from title", () => {
-		const node = createNode("  Spaced Title  ");
+		const parent = createTestNode("Parent");
+		const node = addChildNode(parent, "  Spaced Title  ");
 		expect(node.title).toBe("Spaced Title");
 	});
-});
 
-describe("addChildNode", () => {
 	test("adds child to parent", () => {
 		const parent = createTestNode("Parent");
 		const child = addChildNode(parent, "Child");

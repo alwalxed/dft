@@ -47,7 +47,8 @@
 		"check-types": "bunx tsc --noEmit",
 		"test": "bun test",
 		"prepublishOnly": "bun run check && bun run check-types",
-		"prepare": "husky"
+		"prepare": "husky",
+		"ci": "bun run format && bun run lint && bun run check-types"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^1.9.4",
