@@ -15,6 +15,7 @@ export interface Project {
 	created_at: string;
 	modified_at: string;
 	root: Node;
+	open_count?: number;
 }
 
 export type ModalType = "new" | "edit" | "delete" | "help";

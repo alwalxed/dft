@@ -6,6 +6,7 @@ import { listCommand } from "./commands/list";
 import { newCommand } from "./commands/new";
 import { openCommand } from "./commands/open";
 import { treeCommand } from "./commands/tree";
+import { getMostOpenedProject } from "./data/storage";
 import { isValidProjectName } from "./utils/validation";
 
 const program = new Command();
@@ -83,6 +84,11 @@ async function main() {
 	const args = process.argv.slice(2);
 
 	if (args.length === 0) {
+		const mostOpenedProject = await getMostOpenedProject();
+		if (mostOpenedProject) {
+			await openCommand(mostOpenedProject);
+			return;
+		}
 		await listCommand();
 		return;
 	}

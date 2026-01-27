@@ -172,6 +172,45 @@ export async function listProjects(): Promise<
 	return projects;
 }
 
+export async function getMostOpenedProject(): Promise<string | null> {
+	const dir = getProjectsDir();
+
+	let files: string[];
+	try {
+		files = await readdir(dir);
+	} catch {
+		return null;
+	}
+
+	let mostOpenedProject: { name: string; openCount: number } | null = null;
+
+	for (const file of files) {
+		if (!file.endsWith(".json")) continue;
+
+		const name = file.slice(0, -5);
+		try {
+			const project = await loadProject(name);
+			const openCount = project.open_count ?? 0;
+
+			if (openCount > 0) {
+				if (
+					!mostOpenedProject ||
+					openCount > mostOpenedProject.openCount ||
+					(openCount === mostOpenedProject.openCount &&
+						project.project_name < mostOpenedProject.name)
+				) {
+					mostOpenedProject = {
+						name: project.project_name,
+						openCount,
+					};
+				}
+			}
+		} catch {}
+	}
+
+	return mostOpenedProject?.name ?? null;
+}
+
 export async function deleteProject(name: string): Promise<void> {
 	const path = getProjectPath(name);
 	const file = Bun.file(path);
