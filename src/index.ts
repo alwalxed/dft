@@ -19,15 +19,13 @@ program
 	.description("Depth-First Thinking - Solve problems the depth-first way")
 	.version("1.0.0");
 
-// dft new|create|init <project_name> <root_title...>
-// Using variadic argument to capture multi-word titles without quotes
+// dft new|create|init <project_name>
 program
-	.command("new <project_name> <root_title...>")
+	.command("new <project_name>")
 	.aliases(["create", "init", "add"])
-	.description("Create a new project with an initial root problem")
-	.action(async (projectName: string, rootTitleParts: string[]) => {
-		const rootTitle = rootTitleParts.join(" ");
-		await newCommand(projectName, rootTitle);
+	.description("Create a new project")
+	.action(async (projectName: string) => {
+		await newCommand(projectName);
 	});
 
 // dft list|ls|show|projects

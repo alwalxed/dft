@@ -1,32 +1,24 @@
 /**
- * dft new <project_name> <root_title>
- * Create a new project with an initial root problem
+ * dft new <project_name>
+ * Create a new project with a default root node
  */
 
 import { v4 as uuidv4 } from "uuid";
 import { projectExists, saveProject } from "../data/storage";
 import type { Project } from "../data/types";
 import { ExitCodes } from "../data/types";
-import { normalizeProjectName, validateProjectName, validateTitle } from "../utils/validation";
+import { normalizeProjectName, validateProjectName } from "../utils/validation";
 
 /**
  * Creates a new project
  *
  * @param projectName - The name of the project
- * @param rootTitle - The title of the root problem
  */
-export async function newCommand(projectName: string, rootTitle: string): Promise<void> {
+export async function newCommand(projectName: string): Promise<void> {
 	// Validate project name
 	const nameValidation = validateProjectName(projectName);
 	if (!nameValidation.isValid) {
 		console.error(nameValidation.error);
-		process.exit(ExitCodes.INVALID_NAME);
-	}
-
-	// Validate root title
-	const titleValidation = validateTitle(rootTitle);
-	if (!titleValidation.isValid) {
-		console.error(titleValidation.error);
 		process.exit(ExitCodes.INVALID_NAME);
 	}
 
@@ -41,7 +33,7 @@ export async function newCommand(projectName: string, rootTitle: string): Promis
 		process.exit(ExitCodes.ALREADY_EXISTS);
 	}
 
-	// Create the project
+	// Create the project with default root
 	const now = new Date().toISOString();
 	const project: Project = {
 		project_name: normalizedName,
@@ -50,7 +42,7 @@ export async function newCommand(projectName: string, rootTitle: string): Promis
 		modified_at: now,
 		root: {
 			id: uuidv4(),
-			title: rootTitle.trim(),
+			title: "root",
 			status: "open",
 			children: [],
 			created_at: now,
@@ -60,7 +52,7 @@ export async function newCommand(projectName: string, rootTitle: string): Promis
 
 	try {
 		await saveProject(project);
-		console.log(`Created project '${normalizedName}' with root problem '${rootTitle.trim()}'`);
+		console.log(`Created project '${normalizedName}'`);
 		process.exit(ExitCodes.SUCCESS);
 	} catch (error) {
 		console.error(error instanceof Error ? error.message : "Failed to create project");

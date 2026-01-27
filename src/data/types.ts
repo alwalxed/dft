@@ -53,8 +53,10 @@ export interface ModalState {
 export interface AppState {
 	/** Loaded project JSON (source of truth) */
 	project: Project;
-	/** Array of node IDs from root to current */
+	/** Array of parent node IDs (empty = viewing root's children) */
 	navigationStack: string[];
+	/** Index of selected item in the current list */
+	selectedIndex: number;
 	/** Active modal or null */
 	modalState: ModalState | null;
 	/** Temporary feedback message */

@@ -1,17 +1,18 @@
 /**
  * Main OpenTUI application
  *
- * Uses OpenTUI's automatic re-rendering when the renderable tree changes,
- * rather than the live mode render loop.
+ * Uses a list-based navigation model where:
+ * - Root is not selectable, we view its children
+ * - Up/down moves selection within list
+ * - Right/Enter dives into selected item
+ * - Left goes back to parent
  */
 
 import { writeSync } from "node:fs";
 import {
-	Box,
 	BoxRenderable,
 	type CliRenderer,
 	type KeyEvent,
-	Text,
 	TextAttributes,
 	TextRenderable,
 	createCliRenderer,
@@ -21,43 +22,34 @@ import {
 	countDescendants,
 	deleteNode,
 	editNodeTitle,
-	findParent,
-	getNextSibling,
-	getPreviousSibling,
-	getSiblingIndex,
+	findNode,
 	toggleNodeStatus,
 } from "../data/operations";
 import { saveProject } from "../data/storage";
 import type { AppState, ModalState, Node, Project } from "../data/types";
-import {
-	formatBreadcrumbs,
-	formatCheckbox,
-	formatStatusBadge,
-	truncate,
-} from "../utils/formatting";
+import { truncate } from "../utils/formatting";
 import { validateTitle } from "../utils/validation";
 import {
-	diveIntoChild,
-	getCurrentNode,
-	getNodePathFromState,
-	getParentNode,
-	getSiblingsFromState,
-	goToParent,
-	handlePostDeleteNavigation,
+	adjustSelectionAfterDelete,
+	diveIn,
+	ensureValidSelection,
+	getBreadcrumbPath,
+	getCurrentList,
+	getCurrentParent,
+	getSelectedNode,
+	goBack,
 	initializeNavigation,
-	moveToNextSibling,
-	moveToPreviousSibling,
+	moveDown,
+	moveUp,
 } from "./navigation";
 
 /** Color palette */
 const colors = {
 	breadcrumbs: "#888888",
-	currentTitle: "#FFFFFF",
-	statusOpen: "#FFFFFF",
-	statusDone: "#00FF00",
-	childrenText: "#CCCCCC",
-	siblingHint: "#888888",
-	keyHints: "#888888",
+	itemDone: "#FFFFFF",
+	itemOpen: "#888888",
+	itemSelected: "#FFFFFF",
+	keyHints: "#666666",
 	border: "#666666",
 	feedback: "#FFAA00",
 	modalBg: "#1a1a1a",
@@ -65,19 +57,35 @@ const colors = {
 } as const;
 
 /**
- * Main application class using raw Renderables for better control
+ * Sanitizes a single input character
+ * Only allows: a-z, A-Z (converted to lowercase), 0-9, space, hyphen, underscore
+ * Returns the sanitized character or null if invalid
+ */
+function sanitizeInputChar(char: string): string | null {
+	// Allow letters (convert to lowercase)
+	if (/^[a-zA-Z]$/.test(char)) {
+		return char.toLowerCase();
+	}
+	// Allow numbers, space, hyphen, underscore
+	if (/^[0-9 _-]$/.test(char)) {
+		return char;
+	}
+	// Invalid character
+	return null;
+}
+
+/**
+ * Main application class using list-based navigation
  */
 export class TUIApp {
 	private renderer: CliRenderer;
 	private state: AppState;
 	private isRunning = false;
 
-	// UI elements using raw renderables
+	// UI elements
 	private mainContainer!: BoxRenderable;
 	private breadcrumbText!: TextRenderable;
-	private statusText!: TextRenderable;
-	private childrenText!: TextRenderable;
-	private siblingsText!: TextRenderable;
+	private listText!: TextRenderable;
 	private feedbackText!: TextRenderable;
 	private hintsText!: TextRenderable;
 	private modalContainer!: BoxRenderable | null;
@@ -86,7 +94,8 @@ export class TUIApp {
 		this.renderer = renderer;
 		this.state = {
 			project,
-			navigationStack: [project.root.id],
+			navigationStack: [],
+			selectedIndex: 0,
 			modalState: null,
 			feedbackMessage: null,
 		};
@@ -99,7 +108,6 @@ export class TUIApp {
 	 * Sets up the UI components
 	 */
 	private setupUI(): void {
-		const width = process.stdout.columns || 80;
 		const height = process.stdout.rows || 24;
 
 		// Main container
@@ -108,7 +116,6 @@ export class TUIApp {
 			width: "100%",
 			height: "100%",
 			flexDirection: "column",
-			backgroundColor: "#000000",
 		});
 
 		// Breadcrumb
@@ -121,36 +128,14 @@ export class TUIApp {
 			top: 0,
 		});
 
-		// Current node status
-		this.statusText = new TextRenderable(this.renderer, {
-			id: "status",
+		// Main list
+		this.listText = new TextRenderable(this.renderer, {
+			id: "list",
 			content: "",
-			fg: colors.currentTitle,
-			attributes: TextAttributes.BOLD,
+			fg: colors.itemOpen,
 			position: "absolute",
-			left: 2,
+			left: 1,
 			top: 2,
-		});
-
-		// Children list
-		this.childrenText = new TextRenderable(this.renderer, {
-			id: "children",
-			content: "",
-			fg: colors.childrenText,
-			position: "absolute",
-			left: 2,
-			top: 4,
-		});
-
-		// Sibling indicators
-		this.siblingsText = new TextRenderable(this.renderer, {
-			id: "siblings",
-			content: "",
-			fg: colors.siblingHint,
-			attributes: TextAttributes.DIM,
-			position: "absolute",
-			left: 2,
-			top: height - 5,
 		});
 
 		// Feedback message
@@ -167,7 +152,7 @@ export class TUIApp {
 		// Key hints
 		this.hintsText = new TextRenderable(this.renderer, {
 			id: "hints",
-			content: "↑↓:siblings →:dive ←:back n:new e:edit d:done x:del ?:help q:quit",
+			content: "↑↓ select  → enter  ← back  n new  e edit  d done  x del  q quit",
 			fg: colors.keyHints,
 			position: "absolute",
 			left: 1,
@@ -177,9 +162,7 @@ export class TUIApp {
 		// Add all to root
 		this.renderer.root.add(this.mainContainer);
 		this.renderer.root.add(this.breadcrumbText);
-		this.renderer.root.add(this.statusText);
-		this.renderer.root.add(this.childrenText);
-		this.renderer.root.add(this.siblingsText);
+		this.renderer.root.add(this.listText);
 		this.renderer.root.add(this.feedbackText);
 		this.renderer.root.add(this.hintsText);
 
@@ -198,7 +181,7 @@ export class TUIApp {
 		// Initial render
 		this.updateDisplay();
 
-		// Wait for quit (OpenTUI handles rendering automatically when tree changes)
+		// Wait for quit
 		return new Promise((resolve) => {
 			const checkRunning = setInterval(() => {
 				if (!this.isRunning) {
@@ -214,30 +197,15 @@ export class TUIApp {
 	 */
 	private updateDisplay(): void {
 		const width = process.stdout.columns || 80;
-		const height = process.stdout.rows || 24;
 
-		// Get current state
-		const currentNode = getCurrentNode(this.state);
-		const nodePath = getNodePathFromState(this.state);
-		const siblings = getSiblingsFromState(this.state);
+		// Ensure selection is valid
+		ensureValidSelection(this.state);
 
 		// Update breadcrumb
-		const breadcrumbs = formatBreadcrumbs(nodePath, this.state.project.project_name);
-		this.breadcrumbText.content = truncate(breadcrumbs, width - 2);
+		this.breadcrumbText.content = this.formatBreadcrumb(width);
 
-		// Update current node status
-		const badge = formatStatusBadge(currentNode.status);
-		const statusColor = currentNode.status === "done" ? colors.statusDone : colors.statusOpen;
-		this.statusText.content = `${badge} ${truncate(currentNode.title, width - 10)}`;
-		this.statusText.fg = statusColor;
-
-		// Update children list
-		this.childrenText.content = this.formatChildrenList(currentNode.children, width);
-
-		// Update sibling indicators
-		const prevSibling = getPreviousSibling(siblings, currentNode.id);
-		const nextSibling = getNextSibling(siblings, currentNode.id);
-		this.siblingsText.content = this.formatSiblingIndicators(prevSibling, nextSibling, width);
+		// Update list
+		this.listText.content = this.formatList(width);
 
 		// Update feedback
 		this.feedbackText.content = this.state.feedbackMessage || "";
@@ -247,41 +215,66 @@ export class TUIApp {
 	}
 
 	/**
-	 * Formats the children list
+	 * Formats the breadcrumb path
 	 */
-	private formatChildrenList(children: Node[], width: number): string {
-		if (children.length === 0) {
-			return "Children:\n  No sub-problems yet. Press 'n' to add one.";
+	private formatBreadcrumb(width: number): string {
+		const path = getBreadcrumbPath(this.state);
+
+		if (path.length === 0) {
+			return truncate(this.state.project.project_name, width - 2);
 		}
 
-		const lines = [`Children (${children.length}):`];
-		const maxShow = 8;
+		const segments = path.map((n) => truncate(n.title, 20));
+		let breadcrumb = segments.join(" > ");
 
-		for (let i = 0; i < Math.min(children.length, maxShow); i++) {
-			const child = children[i];
-			const checkbox = formatCheckbox(child.status);
-			const title = truncate(child.title, width - 12);
-			lines.push(`  • ${checkbox} ${title}`);
+		if (breadcrumb.length > width - 2) {
+			// Truncate from start
+			while (segments.length > 1 && breadcrumb.length > width - 8) {
+				segments.shift();
+				breadcrumb = `... > ${segments.join(" > ")}`;
+			}
 		}
 
-		if (children.length > maxShow) {
-			lines.push(`  ... and ${children.length - maxShow} more`);
-		}
-
-		return lines.join("\n");
+		return breadcrumb;
 	}
 
 	/**
-	 * Formats sibling indicators
+	 * Formats the list with selection indicator
+	 * Uses plain text only - no ANSI escape codes
 	 */
-	private formatSiblingIndicators(prev: Node | null, next: Node | null, width: number): string {
+	private formatList(width: number): string {
+		const list = getCurrentList(this.state);
+
+		if (list.length === 0) {
+			return "No items. Press 'n' to create one.";
+		}
+
 		const lines: string[] = [];
-		if (prev) {
-			lines.push(`↑ ${truncate(prev.title, width - 6)}`);
+		const maxShow = Math.min(list.length, (process.stdout.rows || 24) - 6);
+
+		// Calculate scroll offset to keep selection visible
+		let startIdx = 0;
+		if (this.state.selectedIndex >= maxShow) {
+			startIdx = this.state.selectedIndex - maxShow + 1;
 		}
-		if (next) {
-			lines.push(`↓ ${truncate(next.title, width - 6)}`);
+
+		for (let i = startIdx; i < Math.min(list.length, startIdx + maxShow); i++) {
+			const item = list[i];
+			const isSelected = i === this.state.selectedIndex;
+			const prefix = isSelected ? ">" : " ";
+			const doneMarker = item.status === "done" ? " (done)" : "";
+			const title = truncate(item.title, width - 10);
+
+			lines.push(`${prefix} ${title}${doneMarker}`);
 		}
+
+		if (list.length > maxShow) {
+			const remaining = list.length - startIdx - maxShow;
+			if (remaining > 0) {
+				lines.push(`  +${remaining} more`);
+			}
+		}
+
 		return lines.join("\n");
 	}
 
@@ -291,7 +284,6 @@ export class TUIApp {
 	private updateModal(): void {
 		// Remove existing modal if any
 		if (this.modalContainer) {
-			// Remove by id
 			this.renderer.root.remove("modal");
 			this.modalContainer = null;
 		}
@@ -308,41 +300,43 @@ export class TUIApp {
 
 		switch (modal.type) {
 			case "new":
-				title = "Create New Sub-Problem";
+				title = "New Task";
 				content = `Title: ${modal.inputValue || "(type here)"}\n${modal.errorMessage || ""}`;
 				buttons = modal.selectedButton === 0 ? "[Create]  Cancel" : " Create  [Cancel]";
 				hints = "Tab:switch  Enter:confirm  Esc:cancel";
 				break;
 			case "edit":
-				title = "Edit Problem";
+				title = "Edit Task";
 				content = `Title: ${modal.inputValue || "(type here)"}\n${modal.errorMessage || ""}`;
 				buttons = modal.selectedButton === 0 ? "[Save]  Cancel" : " Save  [Cancel]";
 				hints = "Tab:switch  Enter:confirm  Esc:cancel";
 				break;
 			case "delete": {
-				const currentNode = getCurrentNode(this.state);
-				const childCount = countDescendants(currentNode);
-				title = "Delete Problem?";
-				content = `"${truncate(currentNode.title, width - 4)}"\n\n`;
+				const selected = getSelectedNode(this.state);
+				if (!selected) break;
+				const childCount = countDescendants(selected);
+				title = "Delete Task?";
+				content = `"${truncate(selected.title, width - 4)}"\n`;
 				content +=
 					childCount > 0
-						? `This will delete ${childCount} children permanently.`
-						: "This will delete this problem permanently.";
+						? `This will delete ${childCount} sub-tasks.`
+						: "This will delete this task.";
 				buttons = modal.selectedButton === 0 ? "[Delete]  Cancel" : " Delete  [Cancel]";
-				hints = "Enter:confirm  Esc:cancel";
+				hints = "Tab:switch buttons  Enter:confirm  Esc:cancel";
 				break;
 			}
 			case "help":
 				title = "Key Bindings";
 				content = [
-					"↑/k    Previous sibling",
-					"↓/j    Next sibling",
-					"→/l    Dive into child",
-					"←/h    Go to parent",
-					"n      New child",
-					"e      Edit title",
+					"↑/k    Move up",
+					"↓/j    Move down",
+					"→/l    Enter / dive in",
+					"←/h    Back / go up",
+					"Enter  Enter selected",
+					"n      New task",
+					"e      Edit selected",
 					"d      Toggle done",
-					"x      Delete",
+					"x      Delete selected",
 					"q      Quit",
 				].join("\n");
 				buttons = "";
@@ -350,8 +344,7 @@ export class TUIApp {
 				break;
 		}
 
-		// Create modal box using raw renderable
-		const modalHeight = modal.type === "help" ? 14 : 10;
+		const modalHeight = modal.type === "help" ? 15 : 10;
 		const left = Math.floor(((process.stdout.columns || 80) - width) / 2);
 		const top = Math.floor(((process.stdout.rows || 24) - modalHeight) / 2);
 
@@ -373,7 +366,7 @@ export class TUIApp {
 		const modalContent = new TextRenderable(this.renderer, {
 			id: "modal-content",
 			content: `${content}\n\n${buttons}\n\n${hints}`,
-			fg: colors.currentTitle,
+			fg: "#FFFFFF",
 		});
 
 		this.modalContainer.add(modalContent);
@@ -400,22 +393,24 @@ export class TUIApp {
 		switch (keyName) {
 			case "up":
 			case "k":
-				this.handleNavigation(moveToPreviousSibling(this.state));
+				this.handleNavigation(moveUp(this.state));
 				break;
 
 			case "down":
 			case "j":
-				this.handleNavigation(moveToNextSibling(this.state));
+				this.handleNavigation(moveDown(this.state));
 				break;
 
 			case "right":
 			case "l":
-				this.handleNavigation(diveIntoChild(this.state));
+			case "return":
+			case "enter":
+				this.handleNavigation(diveIn(this.state));
 				break;
 
 			case "left":
 			case "h":
-				this.handleNavigation(goToParent(this.state));
+				this.handleNavigation(goBack(this.state));
 				break;
 
 			case "n":
@@ -474,10 +469,15 @@ export class TUIApp {
 	 * Opens the edit modal with current title
 	 */
 	private openEditModal(): void {
-		const currentNode = getCurrentNode(this.state);
+		const selected = getSelectedNode(this.state);
+		if (!selected) {
+			this.showFeedback("Nothing selected");
+			return;
+		}
+
 		this.state.modalState = {
 			type: "edit",
-			inputValue: currentNode.title,
+			inputValue: selected.title,
 			selectedButton: 0,
 		};
 		this.updateDisplay();
@@ -487,8 +487,9 @@ export class TUIApp {
 	 * Opens the delete confirmation modal
 	 */
 	private openDeleteModal(): void {
-		if (this.state.navigationStack.length === 1) {
-			this.showFeedback("Cannot delete root problem");
+		const selected = getSelectedNode(this.state);
+		if (!selected) {
+			this.showFeedback("Nothing selected");
 			return;
 		}
 
@@ -548,8 +549,15 @@ export class TUIApp {
 			default:
 				if ((modal.type === "new" || modal.type === "edit") && key.sequence) {
 					if (key.sequence.length === 1 && key.sequence.charCodeAt(0) >= 32) {
-						modal.inputValue = (modal.inputValue || "") + key.sequence;
-						modal.errorMessage = undefined;
+						const char = key.sequence;
+						const sanitized = sanitizeInputChar(char);
+
+						if (sanitized) {
+							modal.inputValue = (modal.inputValue || "") + sanitized;
+							modal.errorMessage = undefined;
+						} else {
+							modal.errorMessage = "Only letters, numbers, spaces, - and _ allowed";
+						}
 						this.updateDisplay();
 					}
 				}
@@ -583,6 +591,14 @@ export class TUIApp {
 		}
 	}
 
+	/**
+	 * Gets the parent node where new items should be added
+	 */
+	private getParentForNewItem(): Node {
+		const parent = getCurrentParent(this.state);
+		return parent || this.state.project.root;
+	}
+
 	private async submitNewNode(): Promise<void> {
 		if (!this.state.modalState) return;
 
@@ -595,13 +611,13 @@ export class TUIApp {
 			return;
 		}
 
-		const currentNode = getCurrentNode(this.state);
-		const newNode = addChildNode(currentNode, title);
+		const parent = this.getParentForNewItem();
+		addChildNode(parent, title);
 
 		await this.save();
-		this.state.navigationStack.push(newNode.id);
+		ensureValidSelection(this.state);
 		this.closeModal();
-		this.showFeedback("Created sub-problem");
+		this.showFeedback("Created task");
 	}
 
 	private async submitEditNode(): Promise<void> {
@@ -616,51 +632,57 @@ export class TUIApp {
 			return;
 		}
 
-		const currentNode = getCurrentNode(this.state);
-		editNodeTitle(currentNode, title);
-
-		await this.save();
-		this.closeModal();
-		this.showFeedback("Updated title");
-	}
-
-	private async submitDelete(): Promise<void> {
-		const currentNode = getCurrentNode(this.state);
-		const parent = findParent(this.state.project.root, currentNode.id);
-
-		if (!parent) {
-			this.showFeedback("Cannot delete root problem");
+		const selected = getSelectedNode(this.state);
+		if (!selected) {
 			this.closeModal();
 			return;
 		}
 
-		const siblings = parent.children;
-		const siblingIndex = getSiblingIndex(siblings, currentNode.id);
-
-		deleteNode(parent, currentNode.id);
-		handlePostDeleteNavigation(this.state, currentNode.id, siblings, siblingIndex);
+		editNodeTitle(selected, title);
 
 		await this.save();
 		this.closeModal();
-		this.showFeedback("Deleted problem");
+		this.showFeedback("Updated");
+	}
+
+	private async submitDelete(): Promise<void> {
+		const selected = getSelectedNode(this.state);
+		if (!selected) {
+			this.closeModal();
+			return;
+		}
+
+		const parent = this.getParentForNewItem();
+		const deletedIndex = this.state.selectedIndex;
+
+		deleteNode(parent, selected.id);
+		adjustSelectionAfterDelete(this.state, deletedIndex);
+
+		await this.save();
+		this.closeModal();
+		this.showFeedback("Deleted");
 	}
 
 	private async toggleDone(): Promise<void> {
-		const currentNode = getCurrentNode(this.state);
-		const wasDone = currentNode.status === "done";
+		const selected = getSelectedNode(this.state);
+		if (!selected) {
+			this.showFeedback("Nothing selected");
+			return;
+		}
 
-		toggleNodeStatus(currentNode);
+		const wasDone = selected.status === "done";
+		toggleNodeStatus(selected);
 		await this.save();
 
-		const message = wasDone ? "Marked as open" : "Marked as done";
+		const message = wasDone ? "Marked open" : "Done";
 		this.showFeedback(message);
+		this.updateDisplay();
 	}
 
 	private showFeedback(message: string): void {
 		this.state.feedbackMessage = message;
 		this.updateDisplay();
 
-		// Clear feedback after delay
 		setTimeout(() => {
 			if (this.state.feedbackMessage === message) {
 				this.state.feedbackMessage = null;
@@ -680,26 +702,21 @@ export class TUIApp {
 	private async quit(): Promise<void> {
 		await this.save();
 
-		// Stop the renderer first
 		try {
 			this.renderer.stop();
 		} catch {
 			// Ignore errors during stop
 		}
 
-		// Restore terminal state
 		restoreTerminal();
-
 		this.isRunning = false;
 	}
 }
 
 /**
- * Restores the terminal to its original state using synchronous writes
- * to ensure cleanup happens before process exit
+ * Restores the terminal to its original state
  */
 function restoreTerminal(): void {
-	// Restore stdin first
 	try {
 		if (process.stdin.isTTY && process.stdin.isRaw) {
 			process.stdin.setRawMode(false);
@@ -708,43 +725,57 @@ function restoreTerminal(): void {
 		// Ignore errors
 	}
 
-	// Build all escape sequences into one string for atomic write
 	const sequences = [
-		"\x1B[?1049l", // Exit alternate screen buffer
-		"\x1B[?25h", // Show cursor
-		"\x1B[0m", // Reset all attributes
-		"\x1B[?1000l", // Disable mouse click tracking
-		"\x1B[?1002l", // Disable mouse button tracking
-		"\x1B[?1003l", // Disable mouse any-event tracking
-		"\x1B[?1006l", // Disable SGR mouse mode
-		"\x1B[2J", // Clear entire screen
-		"\x1B[H", // Move cursor to home position
-		"\x1B[?25h", // Show cursor again (redundant but safe)
+		"\x1B[?1049l",
+		"\x1B[?25h",
+		"\x1B[0m",
+		"\x1B[?1000l",
+		"\x1B[?1002l",
+		"\x1B[?1003l",
+		"\x1B[?1006l",
+		"\x1B[2J",
+		"\x1B[H",
+		"\x1B[?25h",
 	].join("");
 
-	// Synchronous write to fd 1 (stdout) to ensure it completes before exit
 	try {
 		writeSync(1, sequences);
 	} catch {
-		// Fallback to async write
 		process.stdout.write(sequences);
 	}
+}
+
+/**
+ * Disables mouse tracking
+ */
+function disableMouseTracking(): void {
+	const sequences = [
+		"\x1B[?1000l",
+		"\x1B[?1002l",
+		"\x1B[?1003l",
+		"\x1B[?1006l",
+		"\x1B[?1015l",
+	].join("");
+	process.stdout.write(sequences);
 }
 
 /**
  * Creates and starts the TUI application
  */
 export async function startTUI(project: Project): Promise<void> {
+	disableMouseTracking();
+
 	const renderer = await createCliRenderer({
 		exitOnCtrlC: true,
 	});
 
-	// Handle unexpected exits
+	disableMouseTracking();
+
 	const cleanup = () => {
 		try {
 			renderer.stop();
 		} catch {
-			// Ignore errors during cleanup
+			// Ignore
 		}
 		restoreTerminal();
 		process.exit(0);
@@ -759,10 +790,8 @@ export async function startTUI(project: Project): Promise<void> {
 	const app = new TUIApp(renderer, project);
 
 	try {
-		// Don't use renderer.start() - OpenTUI auto-renders on tree changes
 		await app.start();
 	} finally {
-		// Always restore terminal
 		restoreTerminal();
 	}
 }

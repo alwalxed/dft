@@ -118,13 +118,14 @@ export async function loadProject(name: string): Promise<Project> {
 	try {
 		project = await file.json();
 	} catch {
-		throw new Error("Project file is corrupted and cannot be loaded.");
+		throw new Error(`Project '${name}' has invalid JSON. The file may be corrupted.`);
 	}
 
 	try {
 		validateProjectSchema(project);
-	} catch {
-		throw new Error("Project file is corrupted and cannot be loaded.");
+	} catch (error) {
+		const detail = error instanceof Error ? error.message : "Unknown error";
+		throw new Error(`Project '${name}' has invalid structure: ${detail}`);
 	}
 
 	return project as Project;

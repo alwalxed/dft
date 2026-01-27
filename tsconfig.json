@@ -1,32 +1,23 @@
 {
-  "compilerOptions": {
-			// Environment setup & latest features
-			"lib": ["ESNext"],
-			"target": "ESNext",
-			"module": "Preserve",
-			"moduleDetection": "force",
-			"allowJs": true,
-
-			// Bundler mode
-			"moduleResolution": "bundler",
-			"allowImportingTsExtensions": true,
-			"verbatimModuleSyntax": true,
-			"noEmit": true,
-
-			// Best practices
-			"strict": true,
-			"skipLibCheck": true,
-			"noFallthroughCasesInSwitch": true,
-			"noImplicitOverride": true,
-
-			// Disabled for OpenTUI compatibility
-			"noUncheckedIndexedAccess": false,
-
-			// Some stricter flags (disabled by default)
-			"noUnusedLocals": false,
-			"noUnusedParameters": false,
-			"noPropertyAccessFromIndexSignature": false
-		},
-		"include": ["src/**/*"],
-		"exclude": ["node_modules", "dist"]
+	"compilerOptions": {
+		"lib": ["ESNext"],
+		"target": "ESNext",
+		"module": "Preserve",
+		"moduleDetection": "force",
+		"allowJs": true,
+		"moduleResolution": "bundler",
+		"allowImportingTsExtensions": true,
+		"verbatimModuleSyntax": true,
+		"noEmit": true,
+		"strict": true,
+		"skipLibCheck": true,
+		"noFallthroughCasesInSwitch": true,
+		"noImplicitOverride": true,
+		"noUncheckedIndexedAccess": false,
+		"noUnusedLocals": false,
+		"noUnusedParameters": false,
+		"noPropertyAccessFromIndexSignature": false
+	},
+	"include": ["src/**/*"],
+	"exclude": ["node_modules", "dist"]
 }
