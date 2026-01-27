@@ -5,6 +5,7 @@
  * rather than the live mode render loop.
  */
 
+import { writeSync } from "node:fs";
 import {
 	Box,
 	BoxRenderable,
@@ -678,8 +679,55 @@ export class TUIApp {
 
 	private async quit(): Promise<void> {
 		await this.save();
-		this.renderer.stop();
+
+		// Stop the renderer first
+		try {
+			this.renderer.stop();
+		} catch {
+			// Ignore errors during stop
+		}
+
+		// Restore terminal state
+		restoreTerminal();
+
 		this.isRunning = false;
+	}
+}
+
+/**
+ * Restores the terminal to its original state using synchronous writes
+ * to ensure cleanup happens before process exit
+ */
+function restoreTerminal(): void {
+	// Restore stdin first
+	try {
+		if (process.stdin.isTTY && process.stdin.isRaw) {
+			process.stdin.setRawMode(false);
+		}
+	} catch {
+		// Ignore errors
+	}
+
+	// Build all escape sequences into one string for atomic write
+	const sequences = [
+		"\x1B[?1049l", // Exit alternate screen buffer
+		"\x1B[?25h", // Show cursor
+		"\x1B[0m", // Reset all attributes
+		"\x1B[?1000l", // Disable mouse click tracking
+		"\x1B[?1002l", // Disable mouse button tracking
+		"\x1B[?1003l", // Disable mouse any-event tracking
+		"\x1B[?1006l", // Disable SGR mouse mode
+		"\x1B[2J", // Clear entire screen
+		"\x1B[H", // Move cursor to home position
+		"\x1B[?25h", // Show cursor again (redundant but safe)
+	].join("");
+
+	// Synchronous write to fd 1 (stdout) to ensure it completes before exit
+	try {
+		writeSync(1, sequences);
+	} catch {
+		// Fallback to async write
+		process.stdout.write(sequences);
 	}
 }
 
@@ -691,9 +739,30 @@ export async function startTUI(project: Project): Promise<void> {
 		exitOnCtrlC: true,
 	});
 
+	// Handle unexpected exits
+	const cleanup = () => {
+		try {
+			renderer.stop();
+		} catch {
+			// Ignore errors during cleanup
+		}
+		restoreTerminal();
+		process.exit(0);
+	};
+
+	process.on("SIGINT", cleanup);
+	process.on("SIGTERM", cleanup);
+	process.on("exit", () => {
+		restoreTerminal();
+	});
+
 	const app = new TUIApp(renderer, project);
 
-	// Don't use renderer.start() - OpenTUI auto-renders on tree changes
-	// This prevents the "weird numbers" issue
-	await app.start();
+	try {
+		// Don't use renderer.start() - OpenTUI auto-renders on tree changes
+		await app.start();
+	} finally {
+		// Always restore terminal
+		restoreTerminal();
+	}
 }
