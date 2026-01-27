@@ -2,7 +2,7 @@
 	"compilerOptions": {
 		"lib": ["ESNext"],
 		"target": "ESNext",
-		"module": "Preserve",
+		"module": "esnext",
 		"moduleDetection": "force",
 		"allowJs": true,
 		"moduleResolution": "bundler",
