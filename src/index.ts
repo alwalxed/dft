@@ -6,6 +6,7 @@ import { listCommand } from "./commands/list";
 import { newCommand } from "./commands/new";
 import { openCommand } from "./commands/open";
 import { treeCommand } from "./commands/tree";
+import { updateCommand } from "./commands/update";
 import { getMostOpenedProject } from "./data/storage";
 import { isValidProjectName } from "./utils/validation";
 
@@ -59,6 +60,14 @@ program
 		await treeCommand(projectName, options);
 	});
 
+program
+	.command("update")
+	.aliases(["upgrade", "check-update"])
+	.description("Check for updates to dft")
+	.action(async () => {
+		await updateCommand();
+	});
+
 const knownCommands = [
 	"new",
 	"create",
@@ -77,6 +86,9 @@ const knownCommands = [
 	"run",
 	"tree",
 	"view",
+	"update",
+	"upgrade",
+	"check-update",
 	"help",
 ];
 

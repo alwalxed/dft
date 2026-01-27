@@ -10,14 +10,27 @@ bun add -g depth-first-thinking
 
 ## Commands
 
-| Command | Description |
-|---------|-------------|
-| `dft new <name>` | Create a new project |
-| `dft list` | List all projects |
-| `dft open <name>` | Open project in TUI |
-| `dft <name>` | Shorthand for `dft open <name>` |
-| `dft tree <name>` | Print tree structure |
-| `dft delete <name>` | Delete a project |
+| Command | Aliases | Description |
+|---------|---------|-------------|
+| `dft new <name>` | `create`, `init`, `add` | Create a new project |
+| `dft list` | `ls`, `show`, `projects` | List all projects sorted by creation date |
+| `dft open <name>` | `use`, `start`, `run` | Launch the interactive TUI session |
+| `dft <name>` | - | Shorthand for `dft open <name>` |
+| `dft tree <name>` | `view` | Print the tree structure to stdout |
+| `dft delete <name>` | `rm`, `remove` | Delete an existing project |
+| `dft update` | `upgrade`, `check-update` | Check for updates to dft |
+
+### Options
+
+- `dft delete <name> --yes` - Skip confirmation prompt when deleting
+- `dft tree <name> --show-status` - Show status markers (default: true)
+- `dft tree <name> --no-status` - Hide status markers
+
+### Default Behavior
+
+Running `dft` without any arguments will:
+- Open the most frequently opened project if one exists
+- Otherwise, list all projects
 
 ## Navigation
 
