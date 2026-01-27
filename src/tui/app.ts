@@ -152,7 +152,7 @@ export class TUIApp {
 		// Key hints
 		this.hintsText = new TextRenderable(this.renderer, {
 			id: "hints",
-			content: "↑↓ select  → enter  ← back  n new  e edit  d done  x del  q quit",
+			content: "↑↓ select  →/space enter  ← back  n new  e edit  d done  x del  q quit",
 			fg: colors.keyHints,
 			position: "absolute",
 			left: 1,
@@ -239,6 +239,49 @@ export class TUIApp {
 	}
 
 	/**
+	 * Checks if all descendants of a node are done
+	 */
+	private allDescendantsDone(node: Node): boolean {
+		for (const child of node.children) {
+			if (child.status !== "done") return false;
+			if (!this.allDescendantsDone(child)) return false;
+		}
+		return true;
+	}
+
+	/**
+	 * Gets the status display for a task
+	 */
+	private getStatusDisplay(item: Node): string {
+		if (item.status !== "done") {
+			return "";
+		}
+
+		// Task is done
+		if (item.children.length === 0) {
+			// No children - just done
+			return " (done)";
+		}
+
+		// Has children - check if all are done
+		if (this.allDescendantsDone(item)) {
+			return " (done)";
+		}
+
+		// Some children not done
+		return " (done, partial)";
+	}
+
+	/**
+	 * Gets the child count display for a task
+	 */
+	private getChildCountDisplay(item: Node): string {
+		const count = countDescendants(item);
+		if (count === 0) return "";
+		return ` [${count}]`;
+	}
+
+	/**
 	 * Formats the list with selection indicator
 	 * Uses plain text only - no ANSI escape codes
 	 */
@@ -262,10 +305,11 @@ export class TUIApp {
 			const item = list[i];
 			const isSelected = i === this.state.selectedIndex;
 			const prefix = isSelected ? ">" : " ";
-			const doneMarker = item.status === "done" ? " (done)" : "";
-			const title = truncate(item.title, width - 10);
+			const status = this.getStatusDisplay(item);
+			const childCount = this.getChildCountDisplay(item);
+			const title = truncate(item.title, width - 25);
 
-			lines.push(`${prefix} ${title}${doneMarker}`);
+			lines.push(`${prefix} ${title}${childCount}${status}`);
 		}
 
 		if (list.length > maxShow) {
@@ -405,6 +449,7 @@ export class TUIApp {
 			case "l":
 			case "return":
 			case "enter":
+			case "space":
 				this.handleNavigation(diveIn(this.state));
 				break;
 
