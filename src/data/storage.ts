@@ -1,14 +1,7 @@
-/**
- * File I/O operations for projects (load, save, list, delete)
- */
-
 import { mkdir, readdir, rename, rm } from "node:fs/promises";
 import { getProjectPath, getProjectsDir } from "../utils/platform";
 import type { Node, Project } from "./types";
 
-/**
- * Validates that a node has the required structure
- */
 function validateNode(node: unknown, path = "root"): node is Node {
 	if (!node || typeof node !== "object") {
 		throw new Error(`Invalid node at ${path}: expected object`);
@@ -40,7 +33,6 @@ function validateNode(node: unknown, path = "root"): node is Node {
 		throw new Error(`Invalid node at ${path}: completed_at must be string or null`);
 	}
 
-	// Validate children recursively
 	for (let i = 0; i < n.children.length; i++) {
 		validateNode(n.children[i], `${path}.children[${i}]`);
 	}
@@ -48,9 +40,6 @@ function validateNode(node: unknown, path = "root"): node is Node {
 	return true;
 }
 
-/**
- * Validates that a project has the required structure
- */
 function validateProjectSchema(project: unknown): project is Project {
 	if (!project || typeof project !== "object") {
 		throw new Error("Project must be an object");
@@ -79,33 +68,17 @@ function validateProjectSchema(project: unknown): project is Project {
 	return true;
 }
 
-/**
- * Ensures the projects directory exists
- */
 export async function ensureProjectsDir(): Promise<void> {
 	const dir = getProjectsDir();
 	await mkdir(dir, { recursive: true });
 }
 
-/**
- * Checks if a project exists
- *
- * @param name - The project name
- * @returns true if the project exists
- */
 export async function projectExists(name: string): Promise<boolean> {
 	const path = getProjectPath(name);
 	const file = Bun.file(path);
 	return await file.exists();
 }
 
-/**
- * Loads a project from disk
- *
- * @param name - The project name
- * @returns The loaded project
- * @throws Error if the project doesn't exist or is corrupted
- */
 export async function loadProject(name: string): Promise<Project> {
 	const path = getProjectPath(name);
 	const file = Bun.file(path);
@@ -131,11 +104,6 @@ export async function loadProject(name: string): Promise<Project> {
 	return project as Project;
 }
 
-/**
- * Saves a project to disk (atomic write using temp file and rename)
- *
- * @param project - The project to save
- */
 export async function saveProject(project: Project): Promise<void> {
 	await ensureProjectsDir();
 
@@ -148,7 +116,6 @@ export async function saveProject(project: Project): Promise<void> {
 		await Bun.write(tempPath, json);
 		await rename(tempPath, projectPath);
 	} catch (error) {
-		// Try to clean up temp file
 		try {
 			await rm(tempPath, { force: true });
 		} catch {
@@ -158,11 +125,6 @@ export async function saveProject(project: Project): Promise<void> {
 	}
 }
 
-/**
- * Lists all projects sorted by creation date (newest first)
- *
- * @returns Array of project info objects
- */
 export async function listProjects(): Promise<
 	Array<{ name: string; nodeCount: number; createdAt: string }>
 > {
@@ -172,7 +134,6 @@ export async function listProjects(): Promise<
 	try {
 		files = await readdir(dir);
 	} catch {
-		// Directory doesn't exist yet
 		return [];
 	}
 
@@ -185,9 +146,16 @@ export async function listProjects(): Promise<
 	for (const file of files) {
 		if (!file.endsWith(".json")) continue;
 
-		const name = file.slice(0, -5); // Remove .json extension
+		const name = file.slice(0, -5);
 		try {
 			const project = await loadProject(name);
+			const countNodes = (node: Node): number => {
+				let count = 1;
+				for (const child of node.children) {
+					count += countNodes(child);
+				}
+				return count;
+			};
 			const nodeCount = countNodes(project.root);
 			projects.push({
 				name: project.project_name,
@@ -199,18 +167,11 @@ export async function listProjects(): Promise<
 		}
 	}
 
-	// Sort by creation date (newest first)
 	projects.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
 	return projects;
 }
 
-/**
- * Deletes a project
- *
- * @param name - The project name
- * @throws Error if the project doesn't exist
- */
 export async function deleteProject(name: string): Promise<void> {
 	const path = getProjectPath(name);
 	const file = Bun.file(path);
@@ -224,15 +185,4 @@ export async function deleteProject(name: string): Promise<void> {
 	} catch {
 		throw new Error("Cannot delete project file. Check permissions.");
 	}
-}
-
-/**
- * Counts all nodes in a tree
- */
-function countNodes(node: Node): number {
-	let count = 1;
-	for (const child of node.children) {
-		count += countNodes(child);
-	}
-	return count;
 }

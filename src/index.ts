@@ -1,8 +1,4 @@
 #!/usr/bin/env bun
-/**
- * dft - Depth-First Thinking
- * A terminal-based todo-list tool that manages workflows using tree structures
- */
 
 import { Command } from "commander";
 import { deleteCommand } from "./commands/delete";
@@ -19,7 +15,6 @@ program
 	.description("Depth-First Thinking - Solve problems the depth-first way")
 	.version("1.0.0");
 
-// dft new|create|init <project_name>
 program
 	.command("new <project_name>")
 	.aliases(["create", "init", "add"])
@@ -28,7 +23,6 @@ program
 		await newCommand(projectName);
 	});
 
-// dft list|ls|show|projects
 program
 	.command("list")
 	.aliases(["ls", "show", "projects"])
@@ -37,7 +31,6 @@ program
 		await listCommand();
 	});
 
-// dft delete|rm|remove <project_name>
 program
 	.command("delete <project_name>")
 	.aliases(["rm", "remove"])
@@ -47,7 +40,6 @@ program
 		await deleteCommand(projectName, options);
 	});
 
-// dft open|use|start|run <project_name>
 program
 	.command("open <project_name>")
 	.aliases(["use", "start", "run"])
@@ -56,7 +48,6 @@ program
 		await openCommand(projectName);
 	});
 
-// dft tree|view <project_name>
 program
 	.command("tree <project_name>")
 	.aliases(["view"])
@@ -67,7 +58,6 @@ program
 		await treeCommand(projectName, options);
 	});
 
-// All known commands and their aliases
 const knownCommands = [
 	"new",
 	"create",
@@ -92,20 +82,17 @@ const knownCommands = [
 async function main() {
 	const args = process.argv.slice(2);
 
-	// No arguments - default to list
 	if (args.length === 0) {
 		await listCommand();
 		return;
 	}
 
-	// Handle shorthand: dft <project_name> when first arg is not a known command
 	if (
 		args.length > 0 &&
 		!args[0].startsWith("-") &&
 		!knownCommands.includes(args[0]) &&
 		isValidProjectName(args[0])
 	) {
-		// Insert "open" command
 		process.argv.splice(2, 0, "open");
 	}
 

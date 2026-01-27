@@ -1,11 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import {
-	isValidProjectName,
-	isValidTitle,
-	normalizeProjectName,
-	validateProjectName,
-	validateTitle,
-} from "./validation";
+import { isValidProjectName, isValidTitle, validateProjectName, validateTitle } from "./validation";
 
 describe("validateProjectName", () => {
 	test("accepts valid project names", () => {
@@ -58,13 +52,6 @@ describe("isValidProjectName", () => {
 	test("returns false for invalid names", () => {
 		expect(isValidProjectName("")).toBe(false);
 		expect(isValidProjectName("list")).toBe(false);
-	});
-});
-
-describe("normalizeProjectName", () => {
-	test("converts to lowercase", () => {
-		expect(normalizeProjectName("MyProject")).toBe("myproject");
-		expect(normalizeProjectName("TEST")).toBe("test");
 	});
 });
 

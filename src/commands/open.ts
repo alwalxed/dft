@@ -1,21 +1,10 @@
-/**
- * dft open <project_name> or dft <project_name>
- * Launch the interactive TUI session
- */
-
 import { loadProject } from "../data/storage";
 import type { Project } from "../data/types";
 import { ExitCodes } from "../data/types";
 import { startTUI } from "../tui/app";
-import { normalizeProjectName } from "../utils/validation";
 
-/**
- * Opens a project in the interactive TUI
- *
- * @param projectName - The name of the project to open
- */
 export async function openCommand(projectName: string): Promise<void> {
-	const normalizedName = normalizeProjectName(projectName);
+	const normalizedName = projectName.toLowerCase();
 
 	let project: Project;
 	try {

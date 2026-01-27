@@ -1,31 +1,18 @@
-/**
- * dft new <project_name>
- * Create a new project with a default root node
- */
-
 import { v4 as uuidv4 } from "uuid";
 import { projectExists, saveProject } from "../data/storage";
 import type { Project } from "../data/types";
 import { ExitCodes } from "../data/types";
-import { normalizeProjectName, validateProjectName } from "../utils/validation";
+import { validateProjectName } from "../utils/validation";
 
-/**
- * Creates a new project
- *
- * @param projectName - The name of the project
- */
 export async function newCommand(projectName: string): Promise<void> {
-	// Validate project name
 	const nameValidation = validateProjectName(projectName);
 	if (!nameValidation.isValid) {
 		console.error(nameValidation.error);
 		process.exit(ExitCodes.INVALID_NAME);
 	}
 
-	// Normalize project name to lowercase
-	const normalizedName = normalizeProjectName(projectName);
+	const normalizedName = projectName.toLowerCase();
 
-	// Check if project already exists
 	if (await projectExists(normalizedName)) {
 		console.error(
 			`Project '${normalizedName}' already exists. Use 'dft open ${normalizedName}' to work on it.`,
@@ -33,7 +20,6 @@ export async function newCommand(projectName: string): Promise<void> {
 		process.exit(ExitCodes.ALREADY_EXISTS);
 	}
 
-	// Create the project with default root
 	const now = new Date().toISOString();
 	const project: Project = {
 		project_name: normalizedName,

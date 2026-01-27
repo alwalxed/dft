@@ -1,7 +1,7 @@
 {
 	"name": "depth-first-thinking",
-	"version": "1.0.0",
-	"description": "Depth-First Thinking - A terminal-based todo-list tool using tree structures with call-stack-inspired navigation",
+	"version": "1.0.1",
+	"description": "A terminal-based task manager with depth-first navigation. Break down tasks into subtasks, navigate recursively, and track progress.",
 	"keywords": [
 		"cli",
 		"tui",

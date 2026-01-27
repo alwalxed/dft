@@ -1,13 +1,3 @@
-/**
- * Main OpenTUI application
- *
- * Uses a list-based navigation model where:
- * - Root is not selectable, we view its children
- * - Up/down moves selection within list
- * - Right/Enter dives into selected item
- * - Left goes back to parent
- */
-
 import { writeSync } from "node:fs";
 import {
 	BoxRenderable,
@@ -43,7 +33,6 @@ import {
 	moveUp,
 } from "./navigation";
 
-/** Color palette */
 const colors = {
 	breadcrumbs: "#888888",
 	itemDone: "#FFFFFF",
@@ -56,33 +45,10 @@ const colors = {
 	error: "#FF4444",
 } as const;
 
-/**
- * Sanitizes a single input character
- * Only allows: a-z, A-Z (converted to lowercase), 0-9, space, hyphen, underscore
- * Returns the sanitized character or null if invalid
- */
-function sanitizeInputChar(char: string): string | null {
-	// Allow letters (convert to lowercase)
-	if (/^[a-zA-Z]$/.test(char)) {
-		return char.toLowerCase();
-	}
-	// Allow numbers, space, hyphen, underscore
-	if (/^[0-9 _-]$/.test(char)) {
-		return char;
-	}
-	// Invalid character
-	return null;
-}
-
-/**
- * Main application class using list-based navigation
- */
 export class TUIApp {
 	private renderer: CliRenderer;
 	private state: AppState;
 	private isRunning = false;
-
-	// UI elements
 	private mainContainer!: BoxRenderable;
 	private breadcrumbText!: TextRenderable;
 	private listText!: TextRenderable;
@@ -104,13 +70,9 @@ export class TUIApp {
 		this.setupUI();
 	}
 
-	/**
-	 * Sets up the UI components
-	 */
 	private setupUI(): void {
 		const height = process.stdout.rows || 24;
 
-		// Main container
 		this.mainContainer = new BoxRenderable(this.renderer, {
 			id: "main",
 			width: "100%",
@@ -118,7 +80,6 @@ export class TUIApp {
 			flexDirection: "column",
 		});
 
-		// Breadcrumb
 		this.breadcrumbText = new TextRenderable(this.renderer, {
 			id: "breadcrumb",
 			content: "",
@@ -128,7 +89,6 @@ export class TUIApp {
 			top: 0,
 		});
 
-		// Main list
 		this.listText = new TextRenderable(this.renderer, {
 			id: "list",
 			content: "",
@@ -138,7 +98,6 @@ export class TUIApp {
 			top: 2,
 		});
 
-		// Feedback message
 		this.feedbackText = new TextRenderable(this.renderer, {
 			id: "feedback",
 			content: "",
@@ -149,7 +108,6 @@ export class TUIApp {
 			top: height - 3,
 		});
 
-		// Key hints
 		this.hintsText = new TextRenderable(this.renderer, {
 			id: "hints",
 			content: "↑↓ select  →/space enter  ← back  n new  e edit  d done  x del  q quit",
@@ -159,7 +117,6 @@ export class TUIApp {
 			top: height - 1,
 		});
 
-		// Add all to root
 		this.renderer.root.add(this.mainContainer);
 		this.renderer.root.add(this.breadcrumbText);
 		this.renderer.root.add(this.listText);
@@ -169,19 +126,11 @@ export class TUIApp {
 		this.modalContainer = null;
 	}
 
-	/**
-	 * Starts the TUI application
-	 */
 	async start(): Promise<void> {
 		this.isRunning = true;
-
-		// Set up keyboard handler
 		this.renderer.keyInput.on("keypress", this.handleKeyPress.bind(this));
-
-		// Initial render
 		this.updateDisplay();
 
-		// Wait for quit
 		return new Promise((resolve) => {
 			const checkRunning = setInterval(() => {
 				if (!this.isRunning) {
@@ -192,31 +141,15 @@ export class TUIApp {
 		});
 	}
 
-	/**
-	 * Updates the display content
-	 */
 	private updateDisplay(): void {
 		const width = process.stdout.columns || 80;
-
-		// Ensure selection is valid
 		ensureValidSelection(this.state);
-
-		// Update breadcrumb
 		this.breadcrumbText.content = this.formatBreadcrumb(width);
-
-		// Update list
 		this.listText.content = this.formatList(width);
-
-		// Update feedback
 		this.feedbackText.content = this.state.feedbackMessage || "";
-
-		// Handle modal if open
 		this.updateModal();
 	}
 
-	/**
-	 * Formats the breadcrumb path
-	 */
 	private formatBreadcrumb(width: number): string {
 		const path = getBreadcrumbPath(this.state);
 
@@ -228,7 +161,6 @@ export class TUIApp {
 		let breadcrumb = segments.join(" > ");
 
 		if (breadcrumb.length > width - 2) {
-			// Truncate from start
 			while (segments.length > 1 && breadcrumb.length > width - 8) {
 				segments.shift();
 				breadcrumb = `... > ${segments.join(" > ")}`;
@@ -238,9 +170,6 @@ export class TUIApp {
 		return breadcrumb;
 	}
 
-	/**
-	 * Checks if all descendants of a node are done
-	 */
 	private allDescendantsDone(node: Node): boolean {
 		for (const child of node.children) {
 			if (child.status !== "done") return false;
@@ -249,42 +178,28 @@ export class TUIApp {
 		return true;
 	}
 
-	/**
-	 * Gets the status display for a task
-	 */
 	private getStatusDisplay(item: Node): string {
 		if (item.status !== "done") {
 			return "";
 		}
 
-		// Task is done
 		if (item.children.length === 0) {
-			// No children - just done
 			return " (done)";
 		}
 
-		// Has children - check if all are done
 		if (this.allDescendantsDone(item)) {
 			return " (done)";
 		}
 
-		// Some children not done
 		return " (done, partial)";
 	}
 
-	/**
-	 * Gets the child count display for a task
-	 */
 	private getChildCountDisplay(item: Node): string {
 		const count = countDescendants(item);
 		if (count === 0) return "";
 		return ` [${count}]`;
 	}
 
-	/**
-	 * Formats the list with selection indicator
-	 * Uses plain text only - no ANSI escape codes
-	 */
 	private formatList(width: number): string {
 		const list = getCurrentList(this.state);
 
@@ -294,8 +209,6 @@ export class TUIApp {
 
 		const lines: string[] = [];
 		const maxShow = Math.min(list.length, (process.stdout.rows || 24) - 6);
-
-		// Calculate scroll offset to keep selection visible
 		let startIdx = 0;
 		if (this.state.selectedIndex >= maxShow) {
 			startIdx = this.state.selectedIndex - maxShow + 1;
@@ -322,11 +235,7 @@ export class TUIApp {
 		return lines.join("\n");
 	}
 
-	/**
-	 * Updates modal display
-	 */
 	private updateModal(): void {
-		// Remove existing modal if any
 		if (this.modalContainer) {
 			this.renderer.root.remove("modal");
 			this.modalContainer = null;
@@ -417,9 +326,6 @@ export class TUIApp {
 		this.renderer.root.add(this.modalContainer);
 	}
 
-	/**
-	 * Handles key press events
-	 */
 	private handleKeyPress(key: KeyEvent): void {
 		if (this.state.modalState) {
 			this.handleModalKeyPress(key);
@@ -428,9 +334,6 @@ export class TUIApp {
 		}
 	}
 
-	/**
-	 * Handles key presses in navigation mode
-	 */
 	private handleNavigationKeyPress(key: KeyEvent): void {
 		const keyName = key.name?.toLowerCase() || key.sequence;
 
@@ -488,9 +391,6 @@ export class TUIApp {
 		}
 	}
 
-	/**
-	 * Handles navigation result
-	 */
 	private handleNavigation(result: { success: boolean; feedbackMessage?: string }): void {
 		if (!result.success && result.feedbackMessage) {
 			this.showFeedback(result.feedbackMessage);
@@ -498,9 +398,6 @@ export class TUIApp {
 		this.updateDisplay();
 	}
 
-	/**
-	 * Opens a modal
-	 */
 	private openModal(type: ModalState["type"]): void {
 		this.state.modalState = {
 			type,
@@ -510,9 +407,6 @@ export class TUIApp {
 		this.updateDisplay();
 	}
 
-	/**
-	 * Opens the edit modal with current title
-	 */
 	private openEditModal(): void {
 		const selected = getSelectedNode(this.state);
 		if (!selected) {
@@ -528,9 +422,6 @@ export class TUIApp {
 		this.updateDisplay();
 	}
 
-	/**
-	 * Opens the delete confirmation modal
-	 */
 	private openDeleteModal(): void {
 		const selected = getSelectedNode(this.state);
 		if (!selected) {
@@ -545,17 +436,11 @@ export class TUIApp {
 		this.updateDisplay();
 	}
 
-	/**
-	 * Closes the current modal
-	 */
 	private closeModal(): void {
 		this.state.modalState = null;
 		this.updateDisplay();
 	}
 
-	/**
-	 * Handles key presses in modal mode
-	 */
 	private handleModalKeyPress(key: KeyEvent): void {
 		if (!this.state.modalState) return;
 
@@ -595,7 +480,12 @@ export class TUIApp {
 				if ((modal.type === "new" || modal.type === "edit") && key.sequence) {
 					if (key.sequence.length === 1 && key.sequence.charCodeAt(0) >= 32) {
 						const char = key.sequence;
-						const sanitized = sanitizeInputChar(char);
+						let sanitized: string | null = null;
+						if (/^[a-zA-Z]$/.test(char)) {
+							sanitized = char.toLowerCase();
+						} else if (/^[0-9 _-]$/.test(char)) {
+							sanitized = char;
+						}
 
 						if (sanitized) {
 							modal.inputValue = (modal.inputValue || "") + sanitized;
@@ -610,9 +500,6 @@ export class TUIApp {
 		}
 	}
 
-	/**
-	 * Handles modal form submission
-	 */
 	private handleModalSubmit(): void {
 		if (!this.state.modalState) return;
 
@@ -636,9 +523,6 @@ export class TUIApp {
 		}
 	}
 
-	/**
-	 * Gets the parent node where new items should be added
-	 */
 	private getParentForNewItem(): Node {
 		const parent = getCurrentParent(this.state);
 		return parent || this.state.project.root;
@@ -758,9 +642,6 @@ export class TUIApp {
 	}
 }
 
-/**
- * Restores the terminal to its original state
- */
 function restoreTerminal(): void {
 	try {
 		if (process.stdin.isTTY && process.stdin.isRaw) {
@@ -790,9 +671,6 @@ function restoreTerminal(): void {
 	}
 }
 
-/**
- * Disables mouse tracking
- */
 function disableMouseTracking(): void {
 	const sequences = [
 		"\x1B[?1000l",
@@ -804,9 +682,6 @@ function disableMouseTracking(): void {
 	process.stdout.write(sequences);
 }
 
-/**
- * Creates and starts the TUI application
- */
 export async function startTUI(project: Project): Promise<void> {
 	disableMouseTracking();
 

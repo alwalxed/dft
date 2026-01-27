@@ -1,20 +1,5 @@
-/**
- * Validation utilities for project names and node titles
- */
-
-/** Reserved project names that cannot be used */
 const RESERVED_NAMES = ["list", "new", "delete", "open", "tree", "help", "version"];
 
-/**
- * Validates a project name according to the specification rules:
- * - Length: 1-50 characters
- * - Characters: a-z, 0-9, -, _
- * - Must start with an alphanumeric character
- * - Cannot be a reserved name
- *
- * @param name - The project name to validate
- * @returns Object with isValid boolean and optional error message
- */
 export function validateProjectName(name: string): {
 	isValid: boolean;
 	error?: string;
@@ -57,24 +42,10 @@ export function validateProjectName(name: string): {
 	return { isValid: true };
 }
 
-/**
- * Checks if a project name is valid (simplified boolean version)
- *
- * @param name - The project name to validate
- * @returns true if the name is valid, false otherwise
- */
 export function isValidProjectName(name: string): boolean {
 	return validateProjectName(name).isValid;
 }
 
-/**
- * Validates a node title according to the specification rules:
- * - Length: 1-200 characters after trimming
- * - Cannot be empty or whitespace-only
- *
- * @param title - The title to validate
- * @returns Object with isValid boolean and optional error message
- */
 export function validateTitle(title: string): {
 	isValid: boolean;
 	error?: string;
@@ -98,22 +69,6 @@ export function validateTitle(title: string): {
 	return { isValid: true };
 }
 
-/**
- * Checks if a title is valid (simplified boolean version)
- *
- * @param title - The title to validate
- * @returns true if the title is valid, false otherwise
- */
 export function isValidTitle(title: string): boolean {
 	return validateTitle(title).isValid;
-}
-
-/**
- * Normalizes a project name (converts to lowercase)
- *
- * @param name - The project name to normalize
- * @returns Normalized (lowercase) project name
- */
-export function normalizeProjectName(name: string): string {
-	return name.toLowerCase();
 }
