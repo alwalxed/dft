@@ -3,13 +3,13 @@
 
 set -e
 
-echo "🔍 Checking formatting..."
+echo "Formatting..."
 bun run format:check
 
-echo "🔍 Linting..."
+echo "Linting..."
 bun run lint
 
-echo "🔍 Checking types..."
+echo "Types..."
 bun run check-types
 
-echo "✅ Pre-commit checks passed!"
+echo "Pre-commit checks passed!"
