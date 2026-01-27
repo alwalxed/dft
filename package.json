@@ -1,6 +1,6 @@
 {
 	"name": "depth-first-thinking",
-	"version": "1.0.1",
+	"version": "1.0.2",
 	"description": "A terminal-based task manager with depth-first navigation. Break down tasks into subtasks, navigate recursively, and track progress.",
 	"keywords": [
 		"cli",
@@ -30,11 +30,7 @@
 	"bin": {
 		"dft": "dist/dft"
 	},
-	"files": [
-		"dist",
-		"README.md",
-		"LICENSE"
-	],
+	"files": ["dist", "README.md", "LICENSE"],
 	"engines": {
 		"bun": ">=1.0.0"
 	},
