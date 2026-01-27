@@ -1,18 +1,65 @@
 {
-  "name": "dft",
-  "module": "src/index.tsx",
-  "type": "module",
-  "private": true,
-  "scripts": {
-    "dev": "bun run --watch src/index.ts"
-  },
-  "devDependencies": {
-    "@types/bun": "latest"
-  },
-  "peerDependencies": {
-    "typescript": "^5"
-  },
-  "dependencies": {
-    "@opentui/core": "^0.1.74"
-  }
+	"name": "depth-first-thinking",
+	"version": "1.0.0",
+	"description": "Depth-First Thinking - A terminal-based todo-list tool using tree structures with call-stack-inspired navigation",
+	"keywords": [
+		"cli",
+		"tui",
+		"terminal",
+		"problem-solving",
+		"todo",
+		"todo-list",
+		"tree",
+		"depth-first",
+		"task-management",
+		"productivity"
+	],
+	"license": "MIT",
+	"author": "alwalxed",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/alwalxed/dft.git"
+	},
+	"bugs": {
+		"url": "https://github.com/alwalxed/dft/issues"
+	},
+	"homepage": "https://github.com/alwalxed/dft#readme",
+	"module": "src/index.ts",
+	"type": "module",
+	"bin": {
+		"dft": "./src/index.ts"
+	},
+	"files": ["src", "README.md", "LICENSE"],
+	"engines": {
+		"bun": ">=1.0.0"
+	},
+	"scripts": {
+		"dev": "bun run --watch src/index.ts",
+		"build": "bun build src/index.ts --compile --outfile dist/dft",
+		"format": "bunx biome format --write src",
+		"format:check": "bunx biome format src",
+		"lint": "bunx biome lint src",
+		"lint:fix": "bunx biome lint --write src",
+		"check": "bunx biome check src",
+		"check:fix": "bunx biome check --write src",
+		"check-types": "bunx tsc --noEmit",
+		"test": "bun test",
+		"prepublishOnly": "bun run check && bun run check-types",
+		"prepare": "husky"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^1.9.4",
+		"@types/bun": "latest",
+		"@types/uuid": "^9.0.0",
+		"husky": "^9.0.0",
+		"typescript": "^5.0.0"
+	},
+	"dependencies": {
+		"@opentui/core": "^0.1.74",
+		"commander": "^11.0.0",
+		"uuid": "^9.0.0"
+	},
+	"publishConfig": {
+		"access": "public"
+	}
 }

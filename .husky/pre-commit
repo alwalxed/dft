@@ -1,0 +1,15 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+set -e
+
+echo "🔍 Checking formatting..."
+bun run format:check
+
+echo "🔍 Linting..."
+bun run lint
+
+echo "🔍 Checking types..."
+bun run check-types
+
+echo "✅ Pre-commit checks passed!"
