@@ -1,6 +1,6 @@
 {
 	"name": "depth-first-thinking",
-	"version": "2.1.4",
+	"version": "2.1.5",
 	"description": "A terminal-based task manager with depth-first navigation.",
 	"keywords": [
 		"cli",
