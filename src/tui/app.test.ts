@@ -76,4 +76,3 @@ describe("viewMode and navigation state", () => {
 		expect(state.selectedIndex).toBe(1);
 	});
 });
-

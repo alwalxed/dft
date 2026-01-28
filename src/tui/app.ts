@@ -111,8 +111,7 @@ export class TUIApp {
 
 		this.hintsText = new TextRenderable(this.renderer, {
 			id: "hints",
-			content:
-				"↑↓ select  →/space enter  ← back  n new  e edit  d done  x del  m mode  q quit",
+			content: "↑↓ select  →/space enter  ← back  n new  e edit  d done  x del  m mode  q quit",
 			fg: colors.keyHints,
 			position: "absolute",
 			left: 1,
@@ -427,9 +426,7 @@ export class TUIApp {
 	private toggleViewMode(): void {
 		const currentMode: ViewMode = this.state.viewMode;
 		this.state.viewMode = currentMode === "zen" ? "list" : "zen";
-		this.showFeedback(
-			this.state.viewMode === "zen" ? "Zen Mode" : "List Mode",
-		);
+		this.showFeedback(this.state.viewMode === "zen" ? "Zen Mode" : "List Mode");
 	}
 
 	private handleNavigation(result: { success: boolean; feedbackMessage?: string }): void {
