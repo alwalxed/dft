@@ -1,5 +1,6 @@
 import { ExitCodes } from "../data/types";
 import { VERSION } from "../version";
+import semver from "semver";
 
 async function fetchLatestVersion(): Promise<string | null> {
 	try {
@@ -14,19 +15,8 @@ async function fetchLatestVersion(): Promise<string | null> {
 	}
 }
 
-function compareVersions(current: string, latest: string): number {
-	const currentParts = current.split(".").map(Number);
-	const latestParts = latest.split(".").map(Number);
-
-	for (let i = 0; i < Math.max(currentParts.length, latestParts.length); i++) {
-		const currentPart = currentParts[i] ?? 0;
-		const latestPart = latestParts[i] ?? 0;
-
-		if (latestPart > currentPart) return 1;
-		if (latestPart < currentPart) return -1;
-	}
-
-	return 0;
+export function compareVersions(current: string, latest: string): number {
+	return semver.compare(current, latest);
 }
 
 export async function updateCommand(): Promise<void> {

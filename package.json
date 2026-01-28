@@ -1,6 +1,6 @@
 {
 	"name": "depth-first-thinking",
-	"version": "2.1.5",
+	"version": "2.1.6",
 	"description": "A terminal-based task manager with depth-first navigation.",
 	"keywords": [
 		"cli",
@@ -61,6 +61,7 @@
 	"dependencies": {
 		"@opentui/core": "^0.1.74",
 		"commander": "^11.0.0",
+		"semver": "^7.6.0",
 		"uuid": "^9.0.0"
 	},
 	"publishConfig": {
