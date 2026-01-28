@@ -34,9 +34,12 @@ Running `dft` without any arguments will:
 
 ## Navigation
 
-- `↑` `↓` - Select task
-- `→` `Space` `Enter` - Enter task / view subtasks
-- `←` - Go back to parent
+When you open a project, **Zen Mode** is enabled by default. In Zen Mode, only the currently selected task is displayed, while navigation still works across the full tree:
+
+- `↑` `↓` - Move between sibling tasks at the current level
+- `→` `Space` `Enter` - Enter task / view its subtasks (move deeper in the hierarchy)
+- `←` - Go back to parent task (move up in the hierarchy)
+- `m` - Toggle between **Zen Mode** (single-task view) and **List Mode** (full list at current level)
 - `n` - New subtask
 - `e` - Edit task title
 - `d` - Toggle done status

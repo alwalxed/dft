@@ -27,10 +27,13 @@ export interface ModalState {
 	selectedButton?: number;
 }
 
+export type ViewMode = "list" | "zen";
+
 export interface AppState {
 	project: Project;
 	navigationStack: string[];
 	selectedIndex: number;
+	viewMode: ViewMode;
 	modalState: ModalState | null;
 	feedbackMessage: string | null;
 	feedbackTimeout?: ReturnType<typeof setTimeout>;

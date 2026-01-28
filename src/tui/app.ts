@@ -16,7 +16,7 @@ import {
 	toggleNodeStatus,
 } from "../data/operations";
 import { saveProject } from "../data/storage";
-import type { AppState, ModalState, Node, Project } from "../data/types";
+import type { AppState, ModalState, Node, Project, ViewMode } from "../data/types";
 import { truncate } from "../utils/formatting";
 import { validateTitle } from "../utils/validation";
 import {
@@ -62,6 +62,7 @@ export class TUIApp {
 			project,
 			navigationStack: [],
 			selectedIndex: 0,
+			viewMode: "zen",
 			modalState: null,
 			feedbackMessage: null,
 		};
@@ -110,7 +111,8 @@ export class TUIApp {
 
 		this.hintsText = new TextRenderable(this.renderer, {
 			id: "hints",
-			content: "↑↓ select  →/space enter  ← back  n new  e edit  d done  x del  q quit",
+			content:
+				"↑↓ select  →/space enter  ← back  n new  e edit  d done  x del  m mode  q quit",
 			fg: colors.keyHints,
 			position: "absolute",
 			left: 1,
@@ -145,7 +147,12 @@ export class TUIApp {
 		const width = process.stdout.columns || 80;
 		ensureValidSelection(this.state);
 		this.breadcrumbText.content = this.formatBreadcrumb(width);
-		this.listText.content = this.formatList(width);
+		const height = process.stdout.rows || 24;
+		if (this.state.viewMode === "zen") {
+			this.listText.content = this.formatZen(width, height);
+		} else {
+			this.listText.content = this.formatList(width);
+		}
 		this.feedbackText.content = this.state.feedbackMessage || "";
 		this.updateModal();
 	}
@@ -198,6 +205,28 @@ export class TUIApp {
 		const count = countDescendants(item);
 		if (count === 0) return "";
 		return ` [${count}]`;
+	}
+
+	private formatZen(width: number, height: number): string {
+		const selected = getSelectedNode(this.state);
+		if (!selected) {
+			return "No items. Press 'n' to create one.";
+		}
+
+		const lines: string[] = [];
+
+		const title = truncate(selected.title, width - 4);
+		const status = this.getStatusDisplay(selected);
+		const childCount = this.getChildCountDisplay(selected);
+
+		lines.push(`> ${title}${childCount}${status}`);
+
+		const availableLines = (height || 24) - 6;
+		for (let i = 1; i < availableLines; i++) {
+			lines.push("");
+		}
+
+		return lines.join("\n");
 	}
 
 	private formatList(width: number): string {
@@ -388,7 +417,19 @@ export class TUIApp {
 			case "q":
 				this.quit();
 				break;
+
+			case "m":
+				this.toggleViewMode();
+				break;
 		}
+	}
+
+	private toggleViewMode(): void {
+		const currentMode: ViewMode = this.state.viewMode;
+		this.state.viewMode = currentMode === "zen" ? "list" : "zen";
+		this.showFeedback(
+			this.state.viewMode === "zen" ? "Zen Mode" : "List Mode",
+		);
 	}
 
 	private handleNavigation(result: { success: boolean; feedbackMessage?: string }): void {
