@@ -2,17 +2,16 @@ import { ExitCodes } from "../data/types";
 
 async function getCurrentVersion(): Promise<string> {
 	try {
-		const packageJsonFile = Bun.file("package.json");
+		// Resolve the package.json that belongs to this installed package,
+		// regardless of the current working directory.
+		const packageUrl = new URL("../../package.json", import.meta.url);
+		const packageJsonFile = Bun.file(packageUrl);
+
 		if (await packageJsonFile.exists()) {
-			const packageJson = (await packageJsonFile.json()) as { version: string };
-			return packageJson.version;
+			const packageJson = (await packageJsonFile.json()) as { version?: string };
+			return packageJson.version ?? "unknown";
 		}
-		// Fallback: try relative to src/commands
-		const fallbackFile = Bun.file("../../package.json");
-		if (await fallbackFile.exists()) {
-			const packageJson = (await fallbackFile.json()) as { version: string };
-			return packageJson.version;
-		}
+
 		return "unknown";
 	} catch {
 		return "unknown";
@@ -50,6 +49,14 @@ function compareVersions(current: string, latest: string): number {
 export async function updateCommand(): Promise<void> {
 	const currentVersion = await getCurrentVersion();
 	console.log(`Current version: ${currentVersion}`);
+
+	if (currentVersion === "unknown") {
+		console.log(
+			"Could not determine the current version. Please make sure dft is installed correctly.",
+		);
+		process.exit(ExitCodes.FILESYSTEM_ERROR);
+		return;
+	}
 
 	const latestVersion = await fetchLatestVersion();
 
