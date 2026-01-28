@@ -1,6 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import type { AppState, Project } from "../data/types";
-import { ensureValidSelection, getCurrentList, initializeNavigation } from "./navigation";
+import {
+	ensureValidSelection,
+	getCurrentList,
+	initializeNavigation,
+	diveIn,
+	goBack,
+} from "./navigation";
 
 function createTestProject(): Project {
 	const now = new Date().toISOString();
@@ -74,5 +80,30 @@ describe("viewMode and navigation state", () => {
 
 		state.viewMode = "zen";
 		expect(state.selectedIndex).toBe(1);
+	});
+
+	test("going back restores parent selection", () => {
+		const project = createTestProject();
+		const state: AppState = {
+			project,
+			navigationStack: [],
+			selectedIndex: 1,
+			viewMode: "zen",
+			modalState: null,
+			feedbackMessage: null,
+		};
+
+		// Dive into Task B
+		const diveResult = diveIn(state);
+		expect(diveResult.success).toBe(true);
+		expect(state.navigationStack).toEqual(["b"]);
+
+		// Go back to parent list and expect Task B to be selected again
+		const backResult = goBack(state);
+		expect(backResult.success).toBe(true);
+		expect(state.navigationStack).toEqual([]);
+
+		const list = getCurrentList(state);
+		expect(list[state.selectedIndex]?.id).toBe("b");
 	});
 });

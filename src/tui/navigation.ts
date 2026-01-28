@@ -98,8 +98,15 @@ export function goBack(state: AppState): NavigationResult {
 		return { success: false, feedbackMessage: "At root" };
 	}
 
+	// Remember the node we are leaving so we can re-select it
+	// when we return to its parent list.
+	const lastId = state.navigationStack[state.navigationStack.length - 1];
 	state.navigationStack.pop();
-	state.selectedIndex = 0;
+
+	const list = getCurrentList(state);
+	const previousIndex = list.findIndex((node) => node.id === lastId);
+
+	state.selectedIndex = previousIndex >= 0 ? previousIndex : 0;
 	return { success: true };
 }
 
