@@ -9,13 +9,14 @@ import { treeCommand } from "./commands/tree";
 import { updateCommand } from "./commands/update";
 import { getMostOpenedProject } from "./data/storage";
 import { isValidProjectName } from "./utils/validation";
+import { VERSION } from "./version";
 
 const program = new Command();
 
 program
 	.name("dft")
 	.description("Depth-First Thinking - Solve problems the depth-first way")
-	.version("1.0.0");
+	.version(VERSION);
 
 program
 	.command("new <project_name>")

@@ -1,6 +1,6 @@
 {
 	"name": "depth-first-thinking",
-	"version": "2.1.0",
+	"version": "2.1.1",
 	"description": "A terminal-based task manager with depth-first navigation. Break down tasks into subtasks, navigate recursively, and track progress.",
 	"keywords": [
 		"cli",
@@ -46,6 +46,7 @@
 		"check:fix": "bunx biome check --write src",
 		"check-types": "bunx tsc --noEmit",
 		"test": "bun test",
+		"sync-version": "bun run scripts/sync-version.ts",
 		"prepublishOnly": "bun run check && bun run check-types",
 		"prepare": "husky",
 		"ci": "bun run format && bun run lint && bun run check-types"

@@ -1,22 +1,5 @@
 import { ExitCodes } from "../data/types";
-
-async function getCurrentVersion(): Promise<string> {
-	try {
-		// Resolve the package.json that belongs to this installed package,
-		// regardless of the current working directory.
-		const packageUrl = new URL("../../package.json", import.meta.url);
-		const packageJsonFile = Bun.file(packageUrl);
-
-		if (await packageJsonFile.exists()) {
-			const packageJson = (await packageJsonFile.json()) as { version?: string };
-			return packageJson.version ?? "unknown";
-		}
-
-		return "unknown";
-	} catch {
-		return "unknown";
-	}
-}
+import { VERSION } from "../version";
 
 async function fetchLatestVersion(): Promise<string | null> {
 	try {
@@ -47,16 +30,8 @@ function compareVersions(current: string, latest: string): number {
 }
 
 export async function updateCommand(): Promise<void> {
-	const currentVersion = await getCurrentVersion();
+	const currentVersion = VERSION;
 	console.log(`Current version: ${currentVersion}`);
-
-	if (currentVersion === "unknown") {
-		console.log(
-			"Could not determine the current version. Please make sure dft is installed correctly.",
-		);
-		process.exit(ExitCodes.FILESYSTEM_ERROR);
-		return;
-	}
 
 	const latestVersion = await fetchLatestVersion();
 
