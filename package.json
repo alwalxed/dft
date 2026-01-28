@@ -37,7 +37,7 @@
 	"scripts": {
 		"preinstall": "node -e \"if(process.env.npm_execpath && !process.env.npm_execpath.includes('bun')){console.error('\\x1b[31mError: Use bun to install dependencies\\x1b[0m\\n\\nInstall bun: https://bun.sh');process.exit(1)}\"",
 		"dev": "bun run --watch src/index.ts",
-		"build": "bun build src/index.ts --compile --outfile dist/dft && chmod +x dist/dft && chmod +x dist/dft.js",
+		"build": "bun build src/index.ts --compile --outfile dist/dft && chmod +x dist/dft",
 		"format": "bunx biome format --write src",
 		"format:check": "bunx biome format src",
 		"lint": "bunx biome lint src",
