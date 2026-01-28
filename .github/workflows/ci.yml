@@ -8,7 +8,7 @@ on:
 
 jobs:
   lint-format-typecheck:
-    name: Lint, Format & Type Check
+    name: Biome Check & Type Check
     runs-on: ubuntu-latest
 
     steps:
@@ -26,11 +26,8 @@ jobs:
       - name: Sync version
         run: bun run sync-version
 
-      - name: Check formatting
-        run: bun run format:check
-
-      - name: Lint
-        run: bun run lint
+      - name: Biome check (lint, format, organize imports)
+        run: bun run biome:check
 
       - name: Type check
         run: bun run check-types

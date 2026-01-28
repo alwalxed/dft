@@ -1,6 +1,6 @@
+import semver from "semver";
 import { ExitCodes } from "../data/types";
 import { VERSION } from "../version";
-import semver from "semver";
 
 async function fetchLatestVersion(): Promise<string | null> {
 	try {

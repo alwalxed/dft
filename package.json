@@ -1,6 +1,6 @@
 {
 	"name": "depth-first-thinking",
-	"version": "2.1.6",
+	"version": "2.1.7",
 	"description": "A terminal-based task manager with depth-first navigation.",
 	"keywords": [
 		"cli",
@@ -38,18 +38,16 @@
 		"preinstall": "node -e \"if(process.env.npm_execpath && !process.env.npm_execpath.includes('bun')){console.error('\\x1b[31mError: Use bun to install dependencies\\x1b[0m\\n\\nInstall bun: https://bun.sh');process.exit(1)}\"",
 		"dev": "bun run --watch src/index.ts",
 		"build": "bun build src/index.ts --target bun --minify --outdir dist",
-		"format": "bunx biome format --write src",
-		"format:check": "bunx biome format src",
-		"lint": "bunx biome lint src",
-		"lint:fix": "bunx biome lint --write src",
-		"check": "bunx biome check src",
-		"check:fix": "bunx biome check --write src",
+		"biome:fix": "bunx biome check --write src",
+		"biome:check": "bunx biome check src",
+		"format": "bun run biome:fix",
+		"lint": "bun run biome:check",
 		"check-types": "bunx tsc --noEmit",
 		"test": "bun test",
 		"sync-version": "bun run scripts/sync-version.ts",
-		"prepublishOnly": "bun run check && bun run check-types",
+		"prepublishOnly": "bun run biome:check && bun run check-types",
 		"prepare": "husky",
-		"ci": "bun run format && bun run lint && bun run check-types"
+		"ci": "bun run biome:check && bun run check-types && bun run test && bun run sync-version"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^1.9.4",

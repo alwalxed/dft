@@ -7,11 +7,11 @@ echo "Syncing version..."
 bun run sync-version
 git add src/version.ts
 
-echo "Formatting..."
-bun run format:check
+echo "Running Biome (fix)..."
+bun run biome:fix
 
-echo "Linting..."
-bun run lint
+echo "Running Biome (check)..."
+bun run biome:check
 
 echo "Types..."
 bun run check-types
