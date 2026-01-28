@@ -22,7 +22,7 @@ bun add -g depth-first-thinking
 
 ### Options
 
-- `dft delete <name> --yes` - Skip confirmation prompt when deleting
+- `dft delete <name> -y, --yes` - Skip confirmation prompt when deleting
 - `dft tree <name> --show-status` - Show status markers (default: true)
 - `dft tree <name> --no-status` - Hide status markers
 

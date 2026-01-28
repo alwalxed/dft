@@ -1,11 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import type { AppState, Project } from "../data/types";
 import {
+	diveIn,
 	ensureValidSelection,
 	getCurrentList,
-	initializeNavigation,
-	diveIn,
 	goBack,
+	initializeNavigation,
 } from "./navigation";
 
 function createTestProject(): Project {

@@ -15,7 +15,7 @@ const program = new Command();
 
 program
 	.name("dft")
-	.description("Depth-First Thinking - Solve problems the depth-first way")
+	.description("A terminal-based task manager with depth-first navigation.")
 	.version(VERSION);
 
 program

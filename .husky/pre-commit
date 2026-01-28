@@ -3,6 +3,10 @@
 
 set -e
 
+echo "Syncing version..."
+bun run sync-version
+git add src/version.ts
+
 echo "Formatting..."
 bun run format:check
 
