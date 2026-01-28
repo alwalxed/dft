@@ -1,6 +1,6 @@
 {
 	"name": "depth-first-thinking",
-	"version": "2.0.8",
+	"version": "2.0.9",
 	"description": "A terminal-based task manager with depth-first navigation. Break down tasks into subtasks, navigate recursively, and track progress.",
 	"keywords": [
 		"cli",
@@ -28,16 +28,16 @@
 	"type": "module",
 	"packageManager": "bun@1.3.2",
 	"bin": {
-		"dft": "dist/dft"
+		"dft": "src/index.ts"
 	},
-	"files": ["dist", "README.md", "LICENSE"],
+	"files": ["src", "README.md", "LICENSE"],
 	"engines": {
 		"bun": ">=1.0.0"
 	},
 	"scripts": {
 		"preinstall": "node -e \"if(process.env.npm_execpath && !process.env.npm_execpath.includes('bun')){console.error('\\x1b[31mError: Use bun to install dependencies\\x1b[0m\\n\\nInstall bun: https://bun.sh');process.exit(1)}\"",
 		"dev": "bun run --watch src/index.ts",
-		"build": "bun build src/index.ts --target bun --minify --outfile dist/dft && chmod +x dist/dft",
+		"build": "bun build src/index.ts --target bun --minify --outdir dist",
 		"format": "bunx biome format --write src",
 		"format:check": "bunx biome format src",
 		"lint": "bunx biome lint src",
@@ -46,7 +46,7 @@
 		"check:fix": "bunx biome check --write src",
 		"check-types": "bunx tsc --noEmit",
 		"test": "bun test",
-		"prepublishOnly": "bun run check && bun run check-types && bun run build",
+		"prepublishOnly": "bun run check && bun run check-types",
 		"prepare": "husky",
 		"ci": "bun run format && bun run lint && bun run check-types"
 	},
